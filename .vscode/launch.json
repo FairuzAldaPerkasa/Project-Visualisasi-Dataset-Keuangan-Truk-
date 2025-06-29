@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "c:/Users/Lenovo/AppData/Local/Temp/ab5c1e0c-ea25-4915-b696-53aaa848c48f_Prak10[1].zip.48f/Prak10",
+      "program": "c:/Users/Lenovo/AppData/Local/Temp/ab5c1e0c-ea25-4915-b696-53aaa848c48f_Prak10[1].zip.48f/Prak10/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}
