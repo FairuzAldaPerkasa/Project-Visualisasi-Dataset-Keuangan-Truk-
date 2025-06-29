@@ -71,7 +71,7 @@ st.markdown("""
 def load_csv_from_files():
     """Load CSV files from local directory"""
     possible_locations = [
-        ('../Dataset/Cleaned/Sheet2_Cleaned.csv', '../Dataset/Cleaned/Sheet3_Cleaned.csv')
+        ('https://raw.githubusercontent.com/FairuzAldaPerkasa/Project-Visualisasi-Dataset-Keuangan-Truk-/refs/heads/main/Dataset/Cleaned/Sheet2_Cleaned.csv', 'https://raw.githubusercontent.com/FairuzAldaPerkasa/Project-Visualisasi-Dataset-Keuangan-Truk-/refs/heads/main/Dataset/Cleaned/Sheet3_Cleaned.csv')
     ]
     
     for sheet2_path, sheet3_path in possible_locations:
