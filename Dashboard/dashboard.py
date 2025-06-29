@@ -66,32 +66,22 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Fungsi untuk load data CSV
+# Fungsi untuk load data CSV dari file lokal
 @st.cache_data
-def load_csv_data():
+def load_csv_from_files():
+    """Load CSV files from local directory"""
     possible_locations = [
-        ('../Dataset/Cleaned/Sheet2_Cleaned.csv', '../Dataset/Cleaned/Sheet3_Cleaned.csv')
+        ('../Dataset/Cleaned/Sheet2_Cleaned.csv', '../Dataset/Cleaned/Sheet3_Cleaned.csv'),
+        ('Dataset/Cleaned/Sheet2_Cleaned.csv', 'Dataset/Cleaned/Sheet3_Cleaned.csv'),
+        ('../../Dataset/Cleaned/Sheet2_Cleaned.csv', '../../Dataset/Cleaned/Sheet3_Cleaned.csv'),
+        ('../P/Dataset/Cleaned/Sheet2_Cleaned.csv', '../P/Dataset/Cleaned/Sheet3_Cleaned.csv')
     ]
     
-    found_files = None
     for sheet2_path, sheet3_path in possible_locations:
         if os.path.exists(sheet2_path) and os.path.exists(sheet3_path):
-            found_files = (sheet2_path, sheet3_path)
-            break
-    
-    if found_files is None:
-        st.error("File dataset tidak ditemukan. Silakan upload file CSV:")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            uploaded_sheet2 = st.file_uploader("Upload Sheet2_Cleaned.csv:", type=['csv'], key="sheet2")
-        with col2:
-            uploaded_sheet3 = st.file_uploader("Upload Sheet3_Cleaned.csv:", type=['csv'], key="sheet3")
-        
-        if uploaded_sheet2 is not None and uploaded_sheet3 is not None:
             try:
-                sheet2 = pd.read_csv(uploaded_sheet2)
-                sheet3 = pd.read_csv(uploaded_sheet3)
+                sheet2 = pd.read_csv(sheet2_path)
+                sheet3 = pd.read_csv(sheet3_path)
                 
                 # Konversi kolom tanggal
                 for df in [sheet2, sheet3]:
@@ -100,15 +90,17 @@ def load_csv_data():
                 
                 return sheet2, sheet3
             except Exception as e:
-                st.error(f"Error loading uploaded files: {str(e)}")
+                st.error(f"Error loading CSV files: {str(e)}")
                 return None, None
-        
-        return None, None
     
+    return None, None
+
+# Fungsi untuk load data dari uploaded files
+def load_csv_from_upload(uploaded_sheet2, uploaded_sheet3):
+    """Load CSV files from uploaded files"""
     try:
-        sheet2_path, sheet3_path = found_files
-        sheet2 = pd.read_csv(sheet2_path)
-        sheet3 = pd.read_csv(sheet3_path)
+        sheet2 = pd.read_csv(uploaded_sheet2)
+        sheet3 = pd.read_csv(uploaded_sheet3)
         
         # Konversi kolom tanggal
         for df in [sheet2, sheet3]:
@@ -116,10 +108,32 @@ def load_csv_data():
                 df['Tanggal'] = pd.to_datetime(df['Tanggal'], errors='coerce')
         
         return sheet2, sheet3
-        
     except Exception as e:
-        st.error(f"Error loading CSV data: {str(e)}")
+        st.error(f"Error loading uploaded files: {str(e)}")
         return None, None
+
+# Fungsi utama untuk load data
+def load_csv_data():
+    """Main function to load CSV data"""
+    # Coba load dari file lokal dulu
+    sheet2, sheet3 = load_csv_from_files()
+    
+    if sheet2 is not None and sheet3 is not None:
+        return sheet2, sheet3
+    
+    # Jika tidak ada file lokal, tampilkan file uploader
+    st.error("File dataset tidak ditemukan. Silakan upload file CSV:")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        uploaded_sheet2 = st.file_uploader("Upload Sheet2_Cleaned.csv:", type=['csv'], key="sheet2")
+    with col2:
+        uploaded_sheet3 = st.file_uploader("Upload Sheet3_Cleaned.csv:", type=['csv'], key="sheet3")
+    
+    if uploaded_sheet2 is not None and uploaded_sheet3 is not None:
+        return load_csv_from_upload(uploaded_sheet2, uploaded_sheet3)
+    
+    return None, None
 
 # 1. ANALISIS TRANSAKSI KEUANGAN
 def analisis_transaksi_keuangan(df):
@@ -1207,7 +1221,7 @@ def main():
     if sheet2 is None or sheet3 is None:
         st.stop()
     
-    # Sidebar untuk navigasi - DIPERBARUI
+    # Sidebar untuk navigasi
     st.sidebar.title("🎛️ Navigasi Dashboard")
     
     analysis_options = [
@@ -1242,7 +1256,7 @@ def main():
     st.sidebar.write(f"📈 Jumlah Kolom: {len(df.columns)}")
     st.sidebar.write(f"🔍 Missing Values: {df.isnull().sum().sum()}")
     
-    # Jalankan analisis sesuai pilihan - DITAMBAHKAN OPTION 7 & 8
+    # Jalankan analisis sesuai pilihan
     if selected_analysis == "💰 1. Transaksi Keuangan":
         analisis_transaksi_keuangan(df)
     elif selected_analysis == "🚛 2. Rekap Pengiriman Air":
