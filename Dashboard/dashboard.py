@@ -70,7 +70,7 @@ st.markdown("""
 @st.cache_data
 def load_csv_data():
     possible_locations = [
-        ('https://raw.githubusercontent.com/FairuzAldaPerkasa/Project-Visualisasi-Dataset-Keuangan-Truk-/refs/heads/main/Dataset/Cleaned/Sheet2_Cleaned.csv', '../Dataset/Cleaned/Sheet3_Cleaned.csv')
+        ('https://raw.githubusercontent.com/FairuzAldaPerkasa/Project-Visualisasi-Dataset-Keuangan-Truk-/refs/heads/main/Dataset/Cleaned/Sheet2_Cleaned.csv', 'https://raw.githubusercontent.com/FairuzAldaPerkasa/Project-Visualisasi-Dataset-Keuangan-Truk-/refs/heads/main/Dataset/Cleaned/Sheet3_Cleaned.csv')
     ]
     
     found_files = None
