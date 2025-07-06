@@ -71,7 +71,8 @@ st.markdown("""
 def load_csv_from_files():
     """Load CSV files from local directory"""
     possible_locations = [
-        ('Dataset/Cleaned/Sheet2_Cleaned.csv', 'Dataset/Cleaned/Sheet3_Cleaned.csv')
+        ('Dataset/Cleaned/Sheet2_Cleaned.csv', 'Dataset/Cleaned/Sheet3_Cleaned.csv'),
+        ('../Dataset/Cleaned/Sheet2_Cleaned.csv', '../Dataset/Cleaned/Sheet3_Cleaned.csv')
     ]
     
     for sheet2_path, sheet3_path in possible_locations:
@@ -123,9 +124,9 @@ def load_csv_data():
     
     col1, col2 = st.columns(2)
     with col1:
-        uploaded_sheet2 = st.file_uploader("Upload Sheet2_Cleaned.csv:", type=['csv'], key="sheet2")
+        uploaded_sheet2 = st.file_uploader("Sheet2_Cleaned.csv:", type=['csv'], key="sheet2")
     with col2:
-        uploaded_sheet3 = st.file_uploader("Upload Sheet3_Cleaned.csv:", type=['csv'], key="sheet3")
+        uploaded_sheet3 = st.file_uploader("Sheet3_Cleaned.csv:", type=['csv'], key="sheet3")
     
     if uploaded_sheet2 is not None and uploaded_sheet3 is not None:
         return load_csv_from_upload(uploaded_sheet2, uploaded_sheet3)
