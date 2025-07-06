@@ -502,7 +502,7 @@ def demografi_pengiriman_air(df, df_locations):
             st.experimental_rerun()
 
 # 4. DEMOGRAFI PENGGUNAAN ARMADA
-def demografi_penggunaan_armada(df):
+def demografi_penggunaan_armada(df, df_locations):
     st.subheader("🚚 Demografi Penggunaan Armada")
     
     # Pastikan kolom yang diperlukan ada
@@ -517,6 +517,13 @@ def demografi_penggunaan_armada(df):
     if 'Tanggal' in df.columns:
         df['Tanggal'] = pd.to_datetime(df['Tanggal'])
         df['Bulan'] = df['Tanggal'].dt.to_period('M').astype(str)
+    
+    # Gabungkan dengan data lokasi dari sheet 3 jika ada kolom Order
+    if 'Order' in df.columns and df_locations is not None and 'Nama Lokasi' in df_locations.columns:
+        df = pd.merge(df, df_locations, left_on='Order', right_on='Nama Lokasi', how='left')
+        st.success("✅ Data lokasi berhasil digabungkan dengan data armada")
+    else:
+        st.warning("⚠️ Kolom 'Order' tidak ditemukan atau data lokasi tidak tersedia")
     
     # Statistik armada
     total_armada = df['Plat Nomor'].nunique()
@@ -587,6 +594,158 @@ def demografi_penggunaan_armada(df):
             }
         )
         st.plotly_chart(fig, use_container_width=True)
+    
+    # PERSEBARAN ARMADA BERDASARKAN LOKASI ORDER - BAGIAN BARU
+    if 'Latitude' in df.columns and 'Longitude' in df.columns and 'Order' in df.columns:
+        st.markdown("### 🗺️ Persebaran Armada Berdasarkan Lokasi Order")
+        
+        # Agregasi data untuk peta persebaran armada
+        armada_location_data = df.groupby(['Plat Nomor', 'Order', 'Latitude', 'Longitude']).agg({
+            'Volume (L)': 'sum',
+            'Tanggal': 'count'
+        }).reset_index()
+        armada_location_data.columns = ['Plat Nomor', 'Order', 'Latitude', 'Longitude', 'Total Volume', 'Frekuensi']
+        
+        # Filter data yang memiliki koordinat valid
+        armada_map_valid = armada_location_data[
+            (armada_location_data['Latitude'].notna()) & 
+            (armada_location_data['Longitude'].notna()) &
+            (armada_location_data['Latitude'] != 0) &
+            (armada_location_data['Longitude'] != 0)
+        ]
+        
+        if len(armada_map_valid) > 0:
+            # Selectbox untuk memilih armada
+            selected_armada = st.selectbox(
+                "Pilih Armada untuk Melihat Persebaran:",
+                options=['Semua Armada'] + list(armada_map_valid['Plat Nomor'].unique())
+            )
+            
+            if selected_armada != 'Semua Armada':
+                display_data = armada_map_valid[armada_map_valid['Plat Nomor'] == selected_armada]
+                map_title = f"Persebaran Armada {selected_armada}"
+            else:
+                display_data = armada_map_valid
+                map_title = "Persebaran Semua Armada"
+            
+            # Normalisasi ukuran untuk visualisasi
+            if len(display_data) > 0:
+                if display_data['Total Volume'].max() == display_data['Total Volume'].min():
+                    display_data['size_normalized'] = 20
+                else:
+                    display_data['size_normalized'] = ((display_data['Total Volume'] - display_data['Total Volume'].min()) / 
+                                                     (display_data['Total Volume'].max() - display_data['Total Volume'].min()) * 40 + 10)
+                
+                # Peta persebaran armada
+                fig = px.scatter_mapbox(
+                    display_data,
+                    lat="Latitude",
+                    lon="Longitude",
+                    size="size_normalized",
+                    color="Plat Nomor",
+                    hover_name="Order",
+                    hover_data={
+                        "Plat Nomor": True,
+                        "Total Volume": ":,.0f L",
+                        "Frekuensi": ":,",
+                        "Latitude": ":.4f",
+                        "Longitude": ":.4f",
+                        "size_normalized": False
+                    },
+                    size_max=25,
+                    zoom=10,
+                    height=600,
+                    title=f"{map_title} (Ukuran: Volume, Warna: Armada)"
+                )
+                
+                fig.update_layout(
+                    mapbox_style="open-street-map",
+                    margin={"r":0,"t":50,"l":0,"b":0}
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Tabel detail persebaran armada
+                st.markdown("### 📋 Detail Persebaran Armada per Lokasi")
+                
+                # Summary per armada dan lokasi
+                summary_data = display_data.copy()
+                summary_data['Total Volume'] = summary_data['Total Volume'].apply(lambda x: f"{x:,.0f} L")
+                summary_data_display = summary_data[['Plat Nomor', 'Order', 'Total Volume', 'Frekuensi', 'Latitude', 'Longitude']]
+                
+                st.dataframe(summary_data_display, use_container_width=True)
+                
+                # Analisis tambahan per armada
+                st.markdown("### 📊 Analisis Armada per Lokasi")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Grafik volume per lokasi untuk armada terpilih
+                    if selected_armada != 'Semua Armada':
+                        location_volume = display_data.groupby('Order')['Total Volume'].sum().reset_index()
+                        location_volume = location_volume.sort_values('Total Volume', ascending=False)
+                        
+                        fig = px.bar(
+                            location_volume,
+                            x='Order',
+                            y='Total Volume',
+                            title=f'Volume per Lokasi - {selected_armada}',
+                            labels={'Total Volume': 'Total Volume (L)', 'Order': 'Lokasi'}
+                        )
+                        fig.update_xaxes(tickangle=45)
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        # Top armada per volume
+                        top_armada_volume = armada_map_valid.groupby('Plat Nomor')['Total Volume'].sum().reset_index()
+                        top_armada_volume = top_armada_volume.sort_values('Total Volume', ascending=False).head(5)
+                        
+                        fig = px.bar(
+                            top_armada_volume,
+                            x='Plat Nomor',
+                            y='Total Volume',
+                            title='Top 5 Armada - Total Volume',
+                            labels={'Total Volume': 'Total Volume (L)', 'Plat Nomor': 'Armada'}
+                        )
+                        fig.update_xaxes(tickangle=45)
+                        st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    # Grafik frekuensi per lokasi
+                    if selected_armada != 'Semua Armada':
+                        location_freq = display_data.groupby('Order')['Frekuensi'].sum().reset_index()
+                        location_freq = location_freq.sort_values('Frekuensi', ascending=False)
+                        
+                        fig = px.bar(
+                            location_freq,
+                            x='Order',
+                            y='Frekuensi',
+                            title=f'Frekuensi per Lokasi - {selected_armada}',
+                            labels={'Frekuensi': 'Frekuensi Kunjungan', 'Order': 'Lokasi'}
+                        )
+                        fig.update_xaxes(tickangle=45)
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        # Sebaran lokasi terbanyak
+                        top_locations = armada_map_valid.groupby('Order')['Frekuensi'].sum().reset_index()
+                        top_locations = top_locations.sort_values('Frekuensi', ascending=False).head(5)
+                        
+                        fig = px.bar(
+                            top_locations,
+                            x='Order',
+                            y='Frekuensi',
+                            title='Top 5 Lokasi - Frekuensi Kunjungan',
+                            labels={'Frekuensi': 'Total Frekuensi', 'Order': 'Lokasi'}
+                        )
+                        fig.update_xaxes(tickangle=45)
+                        st.plotly_chart(fig, use_container_width=True)
+                
+            else:
+                st.warning("⚠️ Tidak ada data armada dengan koordinat valid")
+        else:
+            st.warning("⚠️ Tidak ada data koordinat yang valid untuk menampilkan persebaran armada")
+    else:
+        st.info("ℹ️ Data koordinat atau kolom Order tidak tersedia untuk menampilkan persebaran armada")
     
     # Analisis bulanan jika ada data bulan
     if 'Bulan' in df.columns:
@@ -1261,7 +1420,7 @@ def main():
     elif selected_analysis == "📍 3. Demografi Pengiriman":
         demografi_pengiriman_air(df, sheet3)
     elif selected_analysis == "🚚 4. Penggunaan Armada":
-        demografi_penggunaan_armada(df)
+        demografi_penggunaan_armada(df, sheet3)
     elif selected_analysis == "👨‍🚀 5. Kinerja Sopir":
         analisis_kinerja_sopir(df)
     elif selected_analysis == "⚡ 6. Efisiensi Operasional":
